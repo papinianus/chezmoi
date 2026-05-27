@@ -23,6 +23,7 @@
       "codex-app"
       "discord@canary"
       "firefox@nightly"
+      "flux-app"
       "ghostty"
       "google-chrome@canary"
       "slack@beta"

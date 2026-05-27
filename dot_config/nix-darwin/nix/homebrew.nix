@@ -17,6 +17,10 @@
     casks = [
       "aquaskk"
       "arc"
+      "claude"
+      "claude-code@latest"
+      "codex"
+      "codex-app"
       "discord@canary"
       "firefox@nightly"
       "ghostty"

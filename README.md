@@ -22,6 +22,11 @@ Nix が使えることを確認します。
 nix --version
 ```
 
+Determinate Nix Installer は zsh から Nix を使えるように、通常 `/etc/zshrc` から
+`/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh` を読み込みます。
+このリポジトリでは `nix.enable = false;` のまま nix-darwin 管理の zsh を使うため、
+`/etc/zshrc.local` から同じファイルを読み込む設定を入れています。
+
 ## 2. chezmoi を一時的に用意
 
 このリポジトリを取得するために、まず Nix 経由で `chezmoi` を一時実行します。
@@ -64,9 +69,18 @@ sudo -H nix run 'github:LnL7/nix-darwin#darwin-rebuild' -- switch --flake '.#mac
 ```
 
 適用後は `darwin-rebuild` が使えるようになります。
+`chezmoi` など Home Manager で入るコマンドもこの時点でインストールされますが、
+現在の shell には新しい profile の PATH がまだ反映されていない場合があります。
+一度 shell を開き直します。
+
+```sh
+exec $SHELL -l
+```
 
 ```sh
 darwin-rebuild --version
+nix --version
+chezmoi --version
 ```
 
 以降の更新は次のコマンドで行います。
@@ -95,6 +109,33 @@ zsh --version
 ```
 
 ## 6. 運用
+
+### 他の端末での更新を取り込む
+
+他の端末で変更を push しただけでは、この Mac の `~/.config/nix-darwin` は更新されません。
+まず chezmoi の source repository を更新し、実ファイルへ適用します。
+
+```sh
+cd ~/.local/share/chezmoi
+git pull --ff-only
+chezmoi diff
+chezmoi apply
+```
+
+Nix 設定を含む変更を取り込んだ場合は、nix-darwin を再適用します。
+
+```sh
+cd ~/.config/nix-darwin
+sudo -H darwin-rebuild switch --flake '.#macos'
+```
+
+一括で更新する場合は `chezmoi update` も使えます。
+
+```sh
+chezmoi update
+cd ~/.config/nix-darwin
+sudo -H darwin-rebuild switch --flake '.#macos'
+```
 
 ### Nix パッケージを追加する
 
@@ -180,6 +221,98 @@ cd ~/.local/share/chezmoi
 git add .
 git commit -m "Update nix inputs"
 git push
+```
+
+## トラブルシュート
+
+### 手順 4 の後に `nix` が見つからない
+
+既に nix-darwin を適用済みで、再起動後や新しい shell で `nix` が見つからない場合は、
+Nix 本体ではなく PATH 初期化が反映されていない可能性があります。
+まず一時的に Determinate Nix の profile script を読み込みます。
+
+```sh
+. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+nix --version
+```
+
+その後、このリポジトリの最新変更を取得して適用します。
+
+```sh
+cd ~/.local/share/chezmoi
+git pull --ff-only
+chezmoi apply
+```
+
+最後に nix-darwin を再適用します。
+
+```sh
+cd ~/.config/nix-darwin
+sudo -H darwin-rebuild switch --flake '.#macos'
+```
+
+この設定では `nix.enable = false;` のまま Determinate Nix を使います。
+nix-darwin が生成する `/etc/zshrc` は `/etc/zshrc.local` を読み込むため、
+このリポジトリでは `/etc/zshrc.local` から
+`/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh` を読み込むようにしています。
+
+### Nix をリセットして手順 1 からやり直す
+
+Determinate Nix Installer で入れた Nix をリセットする場合でも、
+nix-darwin が入っている環境では先に nix-darwin をアンインストールします。
+まず Nix の PATH が現在の shell に入っていることを確認します。
+
+```sh
+nix --version
+```
+
+`nix` が見つからない場合は、一時的に Determinate Nix の profile script を読み込みます。
+
+```sh
+. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+nix --version
+```
+
+nix-darwin の最新 uninstaller を実行します。
+
+```sh
+sudo nix --extra-experimental-features "nix-command flakes" run github:LnL7/nix-darwin#darwin-uninstaller
+```
+
+上のコマンドが動かない場合は、ローカルに入っている uninstaller を使います。
+
+```sh
+sudo darwin-uninstaller
+```
+
+その後、`/nix` を手で削除せず、Determinate Nix Installer 付属のアンインストーラで Nix を削除します。
+
+```sh
+/nix/nix-installer uninstall
+```
+
+アンインストール後、shell を開き直して `nix` が見つからないことを確認します。
+
+```sh
+exec $SHELL -l
+command -v nix
+```
+
+`command -v nix` が何も表示しなければ、手順 1 から再開します。
+
+```sh
+curl -fsSL https://install.determinate.systems/nix | sh -s -- install
+exec $SHELL -l
+nix --version
+```
+
+`~/.local/share/chezmoi` と `~/.config/nix-darwin` が残っている場合は、
+手順 2 の `chezmoi init` は不要です。最新化してから手順 3 へ進みます。
+
+```sh
+cd ~/.local/share/chezmoi
+git pull --ff-only
+nix run nixpkgs#chezmoi -- apply
 ```
 
 ## 構成

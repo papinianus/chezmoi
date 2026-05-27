@@ -29,6 +29,12 @@
     pkgs.zsh
   ];
 
+  environment.etc."zshrc.local".text = ''
+    if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+      . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+    fi
+  '';
+
   system = {
     primaryUser = username;
     stateVersion = 6;

@@ -10,6 +10,12 @@
     homeDirectory = "/Users/${username}";
     stateVersion = "25.05";
 
+    file.".config/ghostty/config".text = ''
+      font-family = FiraCode Nerd Font
+      font-size = 14
+      shell-integration = zsh
+    '';
+
     packages = with pkgs; [
       bat
       chezmoi

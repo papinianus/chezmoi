@@ -17,8 +17,12 @@
     casks = [
       "aquaskk"
       "arc"
+      "discord@canary"
       "firefox@nightly"
+      "ghostty"
       "google-chrome@canary"
+      "slack@beta"
+      "thebrowsercompany-dia"
     ];
 
     masApps = {
